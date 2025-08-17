@@ -17,7 +17,6 @@ def automate_bloxd():
             page.goto("https://www.bloxd.io/", timeout=60000)
 
             # 1. Click the "Agree" button
-            # Playwright automatically waits for the element to be ready.
             print("Looking for the 'Agree' button...")
             page.get_by_role("button", name="Agree").click()
             print("Clicked 'Agree'.")
@@ -42,7 +41,6 @@ def automate_bloxd():
             time.sleep(5)
 
             print("Activating game window and typing message...")
-            # Use page.keyboard for direct input
             page.keyboard.press("Enter")
             time.sleep(1) # A small pause for the chat box to appear
             page.keyboard.type("Hello World By forgot :O")
@@ -53,8 +51,6 @@ def automate_bloxd():
             print(f"An error occurred: {e}")
         
         finally:
-            # This part will not be reached because of the infinite loop,
-            # but it's good practice. The browser will close if the loop is removed.
             print("Automation script has finished its tasks.")
 
 if __name__ == "__main__":
