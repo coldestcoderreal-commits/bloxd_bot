@@ -21,14 +21,14 @@ def health_check_and_screenshot():
         <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="15">
             <style>body{{background-color:#121212;color:white;font-family:sans-serif;text-align:center;}} img{{border:2px solid #555;max-width:90%;height:auto;margin-top:20px;}}</style>
         </head><body><h1>Bloxd.io Bot Status</h1><p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p>The bot is now paused.</p>
+            <p>The bot has clicked 'Sandbox Survival' and is now paused.</p>
             <img src="data:image/png;base64,{b64_image}" alt="Live Screenshot">
         </body></html>"""
         return html_content, 200
     else:
         return """<html><head><title>Bot Starting</title><meta http-equiv="refresh" content="5"></head>
             <body style="background-color:#121212;color:white;font-family:sans-serif;"><h1>Bot is starting up...</h1>
-            <p>Waiting for the bot to take a screenshot. This page will refresh automatically.</p>
+            <p>Waiting for the bot to complete its task. This page will refresh automatically.</p>
             </body></html>""", 200
 
 def run_web_server():
@@ -39,50 +39,45 @@ def run_web_server():
 def run_bot():
     global latest_screenshot_bytes
     browser = None
-    page = None # Define page in the outer scope for the final error handler
+    page = None
     
     try:
         with sync_playwright() as p:
             print("Initializing the browser...")
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
             page = browser.new_page()
 
             print("Navigating to https://bloxd.io/")
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
+            # Step 1: Click "Agree"
             try:
-                print("Looking for the 'Agree' button on the privacy pop-up...")
+                print("Looking for the 'Agree' button...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
-                # Wait for the button to be visible before clicking
                 page.wait_for_selector(agree_button_selector, state='visible', timeout=30000)
                 page.locator(agree_button_selector).click()
-                print("Successfully clicked the 'Agree' button.")
+                print("Clicked the 'Agree' button.")
             except Exception as e:
-                print(f"Warning: Could not click the 'Agree' button. It might not have appeared. Error: {e}")
+                print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
 
-            # --- NEW, MORE ROBUST ACTION STEPS ---
+            # Step 2: Click "Sandbox Survival"
             game_card_selector = ".AvailableGameclassicsurvival"
-            
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
-            # Wait until the element is actually visible on the page
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
-
-            print("Taking a screenshot before clicking the game card...")
-            with lock:
-                latest_screenshot_bytes = page.screenshot(timeout=10000)
-
+            
             print("Clicking 'Sandbox Survival' game card...")
             page.locator(game_card_selector).click()
-            print("Successfully clicked 'Sandbox Survival'.")
+            print("Clicked 'Sandbox Survival'.")
             
-            print("Waiting 5 seconds for the lobby screen to appear...")
-            time.sleep(5)
+            # Step 3: Wait and take screenshot
+            print("Waiting 10 seconds for the next screen to load...")
+            time.sleep(10)
 
-            print("Taking final screenshot...")
+            print("Taking screenshot...")
             with lock:
                 latest_screenshot_bytes = page.screenshot(timeout=10000)
             
-            print("Screenshot captured. The bot is now paused with the browser open.")
+            print("Screenshot captured. The bot is now paused.")
 
             while True:
                 time.sleep(60)
