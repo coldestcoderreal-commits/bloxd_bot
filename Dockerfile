@@ -27,19 +27,12 @@ RUN CHROME_VERSION=$(google-chrome --version | cut -f 3 -d ' ' | cut -d '.' -f 1
     mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
     rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64
 
-# 4. Dynamically find and download the latest uBlock Origin release
-RUN UBLOCK_URL=$(curl -s https://api.github.com/repos/gorhill/uBlock/releases/latest | jq -r ".assets[] | select(.name | endswith(\".chromium.zip\")) | .browser_download_url") && \
-    echo "Downloading uBlock Origin from: ${UBLOCK_URL}" && \
-    wget -O /tmp/ublock.zip "${UBLOCK_URL}" && \
-    unzip /tmp/ublock.zip -d /app/ublock && \
-    rm /tmp/ublock.zip
-
-# 5. Copy project files
+# 4. Copy project files
 COPY requirements.txt .
 COPY browse.py .
 
-# 6. Install Python requirements
+# 5. Install Python requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 7. Set the command to run the script
+# 6. Set the command to run the script
 CMD ["python", "browse.py"]
