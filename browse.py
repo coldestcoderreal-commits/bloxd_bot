@@ -85,15 +85,15 @@ def run_bot_sequence():
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
             
-            # --- THIS IS THE CORRECTED LOGIC ---
+            lobby_input_locator = page.get_by_placeholder("Lobby Name")
             print("Entering lobby name...")
-            # Playwright's .fill() command automatically waits for the element to be enabled.
-            # The explicit (and incorrect) .wait_for() call is removed.
-            page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈", timeout=30000)
+            lobby_input_locator.fill("🩸🩸lifesteal😈", timeout=30000)
             print("Lobby name entered.")
 
+            # --- THIS IS THE CORRECTED LOGIC ---
             print("Looking for the 'Join' button...")
-            page.get_by_role("button", name="Join").dispatch_event('click')
+            # Use the standard .click() for its auto-waiting, but prevent it from getting stuck on navigation.
+            page.get_by_role("button", name="Join").click(no_wait_after=True, timeout=15000)
             print("Clicked 'Join'. Waiting for game to load...")
 
             print("Waiting 15 seconds for the world to render...")
@@ -120,6 +120,7 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
+
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
