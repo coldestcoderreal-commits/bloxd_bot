@@ -24,22 +24,33 @@ def automate_bloxd():
             print("Navigating to https://www.bloxd.io/...")
             page.goto("https://www.bloxd.io/", timeout=60000)
 
-            print("Looking for the 'Agree' button...")
-            page.get_by_role("button", name="Agree").click()
+            # 1. Handle the "Agree" button inside its iframe
+            print("Looking for the consent iframe...")
+            # Common cookie banners are in an iframe. We target it first.
+            # This selector is a common pattern for consent management platforms.
+            consent_frame = page.frame_locator('iframe[title="Privacy"]')
+            
+            print("Looking for the 'Agree' button inside the iframe...")
+            # Now, find and click the button *within* the located frame.
+            consent_frame.get_by_role("button", name="Agree").click()
             print("Clicked 'Agree'.")
 
+            # 2. Click the "Sandbox Survival" game card
             print("Looking for the 'Sandbox Survival' game card...")
             page.locator(".AvailableGameclassicsurvival").click()
             print("Clicked 'Sandbox Survival'.")
 
+            # 3. Enter the lobby name
             print("Entering lobby name...")
             page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈")
             print("Lobby name entered.")
 
+            # 4. Click the "Join" button
             print("Looking for the 'Join' button...")
             page.get_by_role("button", name="Join").click()
             print("Clicked 'Join'. Joining the game...")
 
+            # 5. Wait for the game to load and interact
             print("Waiting 5 seconds for the game to load...")
             time.sleep(5)
 
