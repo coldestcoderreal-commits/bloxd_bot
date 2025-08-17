@@ -1,20 +1,18 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# 1. Use the official Playwright base image for Python.
+# This image includes Python, Playwright, and all necessary browser dependencies.
+# Using a specific version tag ensures reproducibility.
+FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy
 
-# Set the working directory in the container
+# 2. Set the working directory
 WORKDIR /app
 
-# 1. Update apt and copy project files
-RUN apt-get update && apt-get install -y --no-install-recommends
+# 3. Copy project files into the container
 COPY requirements.txt .
 COPY browse.py .
 
-# 2. Install Python dependencies
+# 4. Install Python dependencies from requirements.txt
+# The base image already includes Playwright, but this ensures the version is locked.
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 3. Install Playwright's browser (Chromium) and its system dependencies
-# The --with-deps flag is crucial as it automatically installs all necessary system libraries.
-RUN playwright install --with-deps chromium
-
-# 4. Set the command to run the script
+# 5. Set the command to run the script
 CMD ["python", "browse.py"]
