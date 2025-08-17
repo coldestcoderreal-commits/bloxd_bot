@@ -50,6 +50,7 @@ def run_bot_sequence():
             print("Navigating to https://bloxd.io/")
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
+            # Step 1: Click "Agree"
             try:
                 print("Looking for the 'Agree' button...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
@@ -59,24 +60,44 @@ def run_bot_sequence():
             except Exception as e:
                 print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
 
+            # Step 2: Click "Sandbox Survival"
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
-            
             print("Clicking 'Sandbox Survival' game card (no wait)...")
-            # --- THIS IS THE KEY CHANGE ---
-            # Tell Playwright not to wait for navigation after this click.
-            page.locator(game_card_selector).click(no_wait_after=True)
+            page.locator(game_card_selector).click(no_wait_after=True) # Use no_wait_after for navigations
             print("Clicked 'Sandbox Survival'.")
             
-            print("Waiting 10 seconds for the next screen to load...")
-            time.sleep(10)
+            # Step 3: Enter Lobby Name
+            lobby_input_selector = 'input[placeholder="Lobby Name"]'
+            print(f"Waiting for lobby input '{lobby_input_selector}' to be visible...")
+            page.wait_for_selector(lobby_input_selector, state='visible', timeout=30000)
+            print("Entering lobby name...")
+            page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈")
+            print("Lobby name entered.")
 
+            # Step 4: Click "Join"
+            print("Looking for the 'Join' button...")
+            page.get_by_role("button", name="Join").click(no_wait_after=True) # Use no_wait_after for navigations
+            print("Clicked 'Join'. Waiting for game to load...")
+
+            # Step 5: Wait and send chat message
+            print("Waiting 15 seconds for the world to render...")
+            time.sleep(15) 
+            print("Activating game window and typing message...")
+            page.keyboard.press("Enter")
+            time.sleep(1)
+            page.keyboard.type("Hello World By forgot :O")
+            page.keyboard.press("Enter")
+            print("Message sent in chat.")
+
+            # Step 6: Take final screenshot
             print("Taking final screenshot...")
             with lock:
+                # Use a timeout to force the screenshot on the busy game page
                 latest_screenshot_bytes = page.screenshot(timeout=15000)
             
-            print("Screenshot captured. The bot will now pause indefinitely.")
+            print("Screenshot captured. The bot is now paused.")
 
             while True:
                 time.sleep(60)
@@ -92,7 +113,6 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
-
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
