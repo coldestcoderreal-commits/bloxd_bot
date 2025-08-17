@@ -18,7 +18,7 @@ def health_check_and_screenshot():
     if screenshot_data:
         b64_image = base64.b64encode(screenshot_data).decode('utf-8')
         html_content = f"""
-        <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="30">
+        <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="15">
             <style>body{{background-color:#121212;color:white;font-family:sans-serif;text-align:center;}} img{{border:2px solid #555;max-width:90%;height:auto;margin-top:20px;}}</style>
         </head><body><h1>Bloxd.io Bot Status</h1><p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
             <p>The bot has completed its task and is now paused.</p>
@@ -37,9 +37,6 @@ def run_web_server():
 
 # --- Part 2: Playwright Bot ---
 def run_bot_sequence():
-    """
-    Runs the first 3 steps of the automation sequence once and then pauses.
-    """
     global latest_screenshot_bytes
     browser = None
     page = None
@@ -50,11 +47,9 @@ def run_bot_sequence():
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
             page = browser.new_page()
 
-            # Step 1: Navigate
             print("Navigating to https://bloxd.io/")
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
-            # Step 2: Click "Agree"
             try:
                 print("Looking for the 'Agree' button...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
@@ -64,26 +59,25 @@ def run_bot_sequence():
             except Exception as e:
                 print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
 
-            # Step 3: Click "Sandbox Survival"
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
             
-            print("Clicking 'Sandbox Survival' game card...")
-            page.locator(game_card_selector).click()
+            print("Clicking 'Sandbox Survival' game card (no wait)...")
+            # --- THIS IS THE KEY CHANGE ---
+            # Tell Playwright not to wait for navigation after this click.
+            page.locator(game_card_selector).click(no_wait_after=True)
             print("Clicked 'Sandbox Survival'.")
             
             print("Waiting 10 seconds for the next screen to load...")
             time.sleep(10)
 
-            # Final Step: Take Screenshot
             print("Taking final screenshot...")
             with lock:
                 latest_screenshot_bytes = page.screenshot(timeout=15000)
             
             print("Screenshot captured. The bot will now pause indefinitely.")
 
-            # Pause forever to keep the browser open
             while True:
                 time.sleep(60)
 
@@ -98,6 +92,7 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
+
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
