@@ -51,7 +51,6 @@ def run_bot_sequence():
             with lock:
                 bot_status_message = "Initializing the browser..."
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
-            # We need to create a context to grant clipboard permissions
             context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
             page = context.new_page()
 
@@ -86,22 +85,18 @@ def run_bot_sequence():
             print("Clicking 'Sandbox Survival' game card (force click)...")
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
-
-            print("Waiting 5 seconds for any post-click pop-ups to appear...")
-            time.sleep(5)
-            print("Pressing 'Escape' key to dismiss potential pop-ups...")
-            page.keyboard.press("Escape")
-            print("Pressed Escape.")
             
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             lobby_name = "🩸🩸lifesteal😈"
             print(f"Waiting for lobby input to be visible...")
             lobby_input_locator.wait_for(state="visible", timeout=30000)
             
+            # Add a short, hard pause to ensure the input field is interactive
+            time.sleep(2)
+
             print(f"Pasting '{lobby_name}' into lobby input...")
-            # Use page.evaluate to write to the clipboard, which is more reliable
             page.evaluate(f'navigator.clipboard.writeText("{lobby_name}")')
-            lobby_input_locator.click()
+            lobby_input_locator.click(no_wait_after=True) # Use no_wait_after to prevent timeout
             page.keyboard.press("Control+V")
             print("Lobby name pasted.")
 
