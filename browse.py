@@ -22,17 +22,18 @@ def automate_bloxd():
             page = browser.new_page()
 
             print("Navigating to https://www.bloxd.io/...")
-            page.goto("https://www.bloxd.io/", timeout=60000)
+            # Increased timeout to give the consent pop-up ample time to load
+            page.goto("https://www.bloxd.io/", timeout=90000)
 
-            # 1. Handle the "Agree" button inside its iframe
-            print("Looking for the consent iframe...")
-            # Common cookie banners are in an iframe. We target it first.
-            # This selector is a common pattern for consent management platforms.
-            consent_frame = page.frame_locator('iframe[title="Privacy"]')
+            # 1. Handle the "Agree" button inside the Google CMP iframe
+            print("Looking for the Google consent iframe...")
+            # This is the new, correct locator for the iframe
+            consent_frame = page.frame_locator('iframe[name="googlefcPresent"]')
             
             print("Looking for the 'Agree' button inside the iframe...")
             # Now, find and click the button *within* the located frame.
-            consent_frame.get_by_role("button", name="Agree").click()
+            # Using a text-based selector is often robust for these pop-ups.
+            consent_frame.get_by_text("Agree").click()
             print("Clicked 'Agree'.")
 
             # 2. Click the "Sandbox Survival" game card
