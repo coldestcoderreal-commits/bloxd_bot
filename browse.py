@@ -51,7 +51,9 @@ def run_bot_sequence():
             with lock:
                 bot_status_message = "Initializing the browser..."
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
-            page = browser.new_page()
+            # Grant clipboard permissions
+            context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
+            page = context.new_page()
 
             print("Navigating to https://bloxd.io/")
             with lock:
@@ -87,13 +89,15 @@ def run_bot_sequence():
             
             # --- THIS IS THE FINAL CORRECTED LOGIC ---
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
-            print("Waiting for lobby input to be visible...")
+            lobby_name = "🩸🩸lifesteal😈"
+            print(f"Waiting for lobby input to be visible...")
             lobby_input_locator.wait_for(state="visible", timeout=30000)
-            print("Clicking on lobby input to focus (force click)...")
-            lobby_input_locator.dispatch_event('click') # Use dispatch_event to avoid timeout
-            print("Typing lobby name sequentially...")
-            lobby_input_locator.press_sequentially("🩸🩸lifesteal😈", delay=50)
-            print("Lobby name entered.")
+            
+            print(f"Writing '{lobby_name}' to clipboard and pasting...")
+            page.evaluate(f'navigator.clipboard.writeText("{lobby_name}")')
+            lobby_input_locator.click()
+            page.keyboard.press("Control+V")
+            print("Lobby name pasted.")
 
             print("Looking for the 'Join' button...")
             page.get_by_role("button", name="Join").dispatch_event('click')
@@ -123,7 +127,6 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
-
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
