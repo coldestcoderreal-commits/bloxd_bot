@@ -14,11 +14,10 @@ RUN apt-get update && apt-get install -y \
 
 # 2. Download and install the latest Google Chrome
 RUN wget -O /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-# Use dpkg and apt-get -f to automatically install Chrome and all its dependencies
 RUN dpkg -i /tmp/google-chrome-stable_current_amd64.deb || apt-get install -fy --no-install-recommends
 RUN rm /tmp/google-chrome-stable_current_amd64.deb
 
-# 3. Automatically detect the installed Chrome version and download the matching ChromeDriver
+# 3. Automatically detect and download the matching ChromeDriver
 RUN CHROME_VERSION=$(google-chrome --version | cut -f 3 -d ' ' | cut -d '.' -f 1) && \
     echo "Detected Chrome version: $CHROME_VERSION" && \
     DRIVER_URL=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json" | jq -r ".milestones[\"$CHROME_VERSION\"].downloads.chromedriver[] | select(.platform==\"linux64\") | .url") && \
@@ -28,12 +27,17 @@ RUN CHROME_VERSION=$(google-chrome --version | cut -f 3 -d ' ' | cut -d '.' -f 1
     mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
     rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64
 
-# 4. Copy and install Python requirements
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# 4. Download and unpack the ad blocker extension
+RUN wget -O /tmp/ublock.zip https://github.com/gorhill/uBlock/releases/latest/download/uBlock0.chromium.zip && \
+    unzip /tmp/ublock.zip -d /app/ublock && \
+    rm /tmp/ublock.zip
 
-# 5. Copy the Python script
+# 5. Copy project files
+COPY requirements.txt .
 COPY browse.py .
 
-# 6. Set the command to run the script
+# 6. Install Python requirements
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 7. Set the command to run the script
 CMD ["python", "browse.py"]
