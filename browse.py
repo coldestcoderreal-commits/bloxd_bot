@@ -17,7 +17,7 @@ app = Flask(__name__)
 def health_check_and_screenshot():
     """
     This route serves an HTML page that displays the latest screenshot.
-    It will show a "loading" message until the screenshot is ready.
+    It will auto-refresh to ensure the screenshot appears once ready.
     """
     with lock:
         screenshot_data = latest_screenshot_bytes
@@ -29,6 +29,7 @@ def health_check_and_screenshot():
         <html>
             <head>
                 <title>Bloxd.io Bot Status</title>
+                <meta http-equiv="refresh" content="30">
                 <style>
                     body {{ background-color: #121212; color: white; font-family: sans-serif; text-align: center; }}
                     img {{ border: 2px solid #555; max-width: 90%; height: auto; margin-top: 20px; }}
@@ -36,8 +37,8 @@ def health_check_and_screenshot():
             </head>
             <body>
                 <h1>Bloxd.io Bot Status</h1>
-                <p>A single screenshot was taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <p>The bot is now idle. This page will not update.</p>
+                <p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p>The bot is now paused. This page will refresh periodically.</p>
                 <img src="data:image/png;base64,{b64_image}" alt="Live Screenshot">
             </body>
         </html>
@@ -62,12 +63,12 @@ def run_web_server():
 # --- Part 2: Simplified Playwright Bot ---
 def run_bot():
     """
-    Navigates to bloxd.io, takes one screenshot, and then stops.
+    Navigates to bloxd.io, takes one screenshot, and then idles forever.
     """
     global latest_screenshot_bytes
-    browser = None
-    try:
-        with sync_playwright() as p:
+    
+    with sync_playwright() as p:
+        try:
             print("Initializing the browser...")
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
@@ -79,19 +80,23 @@ def run_bot():
             time.sleep(10)
 
             print("Taking screenshot...")
-            # Take screenshot and store it in the global variable for Flask
             with lock:
                 latest_screenshot_bytes = page.screenshot()
             
-            print("Screenshot captured and is now available on the website.")
+            print("Screenshot captured. The bot is now paused and the browser will remain open.")
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    
-    finally:
-        if browser:
-            browser.close()
-        print("Browser session closed.")
+            # Keep the bot's main function alive indefinitely.
+            # This prevents the 'with' block from exiting and closing the browser.
+            while True:
+                time.sleep(60)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            # If an error happens, we still try to keep the script alive
+            # so the web server continues to run.
+            print("An error occurred, but the container will continue to idle.")
+            while True:
+                time.sleep(60)
 
 
 if __name__ == "__main__":
@@ -100,10 +105,5 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
     
-    # Run the bot's task
+    # Run the bot's task. It will now loop internally.
     run_bot()
-    
-    # Keep the container (and the web server) running
-    print("Bot has finished its task. Container will now idle.")
-    while True:
-        time.sleep(60)
