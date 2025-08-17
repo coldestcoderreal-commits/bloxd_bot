@@ -42,16 +42,25 @@ def run_web_server():
 # --- Part 2: Playwright Bot ---
 def run_bot_sequence():
     global bot_status_message
-    browser = None
-    page = None
+    context = None
     
     try:
         with sync_playwright() as p:
-            print("Initializing the browser...")
+            print("Initializing the browser with uBlock Origin...")
             with lock:
-                bot_status_message = "Initializing the browser..."
-            browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
-            context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
+                bot_status_message = "Initializing the browser with uBlock Origin..."
+            
+            extension_path = "/app/ublock_extension"
+            # Use launch_persistent_context to load the unpacked extension
+            context = p.chromium.launch_persistent_context(
+                '', # Empty string for a temporary user data directory
+                headless=True,
+                args=[
+                    f'--disable-extensions-except={extension_path}',
+                    f'--load-extension={extension_path}',
+                    '--window-size=1280,720'
+                ]
+            )
             page = context.new_page()
 
             print("Navigating to https://bloxd.io/")
@@ -59,43 +68,16 @@ def run_bot_sequence():
                 bot_status_message = "Navigating to bloxd.io..."
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
-            print("Page loaded. Waiting 15 seconds for initial animations to settle...")
+            print("Page loaded. Waiting 15 seconds for uBlock to block elements...")
             time.sleep(15)
 
-            try:
-                print("Looking for the 'Agree' button...")
-                agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
-                page.locator(agree_button_selector).click(timeout=15000)
-                print("Clicked the 'Agree' button.")
-            except Exception as e:
-                print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
-
-            try:
-                username_selector = "div.PlayerNamePreview .TextFromServerEntityName"
-                username = page.locator(username_selector).inner_text(timeout=10000)
-                print(f"SUCCESS: Logged in as: {username}")
-                with lock:
-                    bot_status_message = f"Logged in as: {username}"
-            except Exception as e:
-                print(f"Warning: Could not extract username. Error: {e}")
-
+            # With uBlock, we assume pop-ups are gone and go straight to the actions.
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
-            print("Clicking 'Sandbox Survival' game card (force click)...")
+            print("Clicking 'Sandbox Survival' game card...")
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
-
-            # --- THIS IS THE FINAL KEY FIX ---
-            try:
-                print("Waiting for a potential second pop-up to appear...")
-                # This is a common selector for close buttons. We look for an 'x' icon.
-                close_button_selector = "div.close-button, i.fa-xmark"
-                print("Looking for a close button on the pop-up...")
-                page.locator(close_button_selector).click(timeout=10000)
-                print("Clicked the close button on the secondary pop-up.")
-            except Exception as e:
-                print(f"Info: No secondary pop-up found, or could not close it. Continuing. Error: {e}")
             
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             lobby_name = "🩸🩸lifesteal😈"
@@ -104,8 +86,7 @@ def run_bot_sequence():
             
             print(f"Pasting '{lobby_name}' into lobby input...")
             lobby_input_locator.click()
-            # A small delay before pasting can sometimes help
-            time.sleep(0.5)
+            page.evaluate(f'navigator.clipboard.writeText("{lobby_name}")')
             page.keyboard.press("Control+V")
             print("Lobby name pasted.")
 
@@ -137,6 +118,10 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
+
+    finally:
+        if context:
+            context.close()
 
 
 if __name__ == "__main__":
