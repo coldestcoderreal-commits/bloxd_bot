@@ -12,10 +12,15 @@ def automate_bloxd():
     Automates a sequence of actions on bloxd.io.
     """
     chrome_options = Options()
+    # Essential options for headless/Docker environments
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
+    
+    # --- New options to reduce memory ---
+    chrome_options.add_argument("--disable-gpu") # Disables GPU hardware acceleration, essential for headless
+    chrome_options.add_argument("--window-size=1280,800") # A smaller window can use less memory
+    chrome_options.add_argument("--disable-features=NetworkService,NetworkServiceInProcess")
 
     # Load the unpacked ad-blocker extension from the directory
     chrome_options.add_argument('--load-extension=/app/ublock')
@@ -65,7 +70,8 @@ def automate_bloxd():
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        driver.save_screenshot("error_screenshot.png")
+        # Saving a screenshot can be helpful for debugging
+        # driver.save_screenshot("error_screenshot.png")
 
     finally:
         print("Automation script has finished its tasks.")
