@@ -4,6 +4,10 @@ FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy
 # 2. Set the working directory
 WORKDIR /app
 
+# --- ADD THIS LINE ---
+# Set the PYTHONUNBUFFERED environment variable to force logs to appear instantly
+ENV PYTHONUNBUFFERED=1
+
 # 3. Copy project files into the container
 COPY requirements.txt .
 COPY browse.py .
