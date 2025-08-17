@@ -58,11 +58,9 @@ def run_bot_sequence():
                 bot_status_message = "Navigating to bloxd.io..."
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
-            # --- NEW: Add a pause to let the page settle before doing anything ---
             print("Page loaded. Waiting 15 seconds for initial animations to settle...")
             time.sleep(15)
 
-            # Step 1: Click "Agree"
             try:
                 print("Looking for the 'Agree' button...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
@@ -71,7 +69,6 @@ def run_bot_sequence():
             except Exception as e:
                 print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
 
-            # Step 2: Extract Username
             try:
                 username_selector = "div.PlayerNamePreview .TextFromServerEntityName"
                 username = page.locator(username_selector).inner_text(timeout=10000)
@@ -81,29 +78,25 @@ def run_bot_sequence():
             except Exception as e:
                 print(f"Warning: Could not extract username. Error: {e}")
 
-            # Step 3: Click "Sandbox Survival"
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
             print("Clicking 'Sandbox Survival' game card (force click)...")
-            # --- THIS IS THE KEY CHANGE ---
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
             
-            # Step 4: Enter Lobby Name
-            lobby_input_selector = 'input[placeholder="Lobby Name"]'
-            print(f"Waiting for lobby input '{lobby_input_selector}' to be enabled...")
-            page.wait_for_selector(lobby_input_selector, state='enabled', timeout=30000)
+            # --- THIS IS THE CORRECTED LINE ---
+            lobby_input_locator = page.get_by_placeholder("Lobby Name")
+            print("Waiting for lobby input to be enabled...")
+            lobby_input_locator.wait_for(state='enabled', timeout=30000)
             print("Entering lobby name...")
-            page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈")
+            lobby_input_locator.fill("🩸🩸lifesteal😈")
             print("Lobby name entered.")
 
-            # Step 5: Click "Join"
             print("Looking for the 'Join' button...")
             page.get_by_role("button", name="Join").dispatch_event('click')
             print("Clicked 'Join'. Waiting for game to load...")
 
-            # Step 6: Wait and send chat message
             print("Waiting 15 seconds for the world to render...")
             time.sleep(15) 
             print("Activating game window and typing message...")
@@ -128,7 +121,6 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
-
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
