@@ -18,10 +18,10 @@ def health_check_and_screenshot():
     if screenshot_data:
         b64_image = base64.b64encode(screenshot_data).decode('utf-8')
         html_content = f"""
-        <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="30">
+        <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="15">
             <style>body{{background-color:#121212;color:white;font-family:sans-serif;text-align:center;}} img{{border:2px solid #555;max-width:90%;height:auto;margin-top:20px;}}</style>
         </head><body><h1>Bloxd.io Bot Status</h1><p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p>The bot has clicked 'Sandbox Survival' and is now paused.</p>
+            <p>The bot is now paused.</p>
             <img src="data:image/png;base64,{b64_image}" alt="Live Screenshot">
         </body></html>"""
         return html_content, 200
@@ -38,63 +38,66 @@ def run_web_server():
 # --- Part 2: Playwright Bot ---
 def run_bot():
     global latest_screenshot_bytes
+    browser = None
+    page = None # Define page in the outer scope for the final error handler
     
-    with sync_playwright() as p:
-        try:
+    try:
+        with sync_playwright() as p:
             print("Initializing the browser...")
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
             print("Navigating to https://bloxd.io/")
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
-
-            print("Page loaded. Waiting 10 seconds for elements to render...")
-            time.sleep(10)
             
             try:
                 print("Looking for the 'Agree' button on the privacy pop-up...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
-                page.locator(agree_button_selector).click(timeout=30000)
+                # Wait for the button to be visible before clicking
+                page.wait_for_selector(agree_button_selector, state='visible', timeout=30000)
+                page.locator(agree_button_selector).click()
                 print("Successfully clicked the 'Agree' button.")
             except Exception as e:
                 print(f"Warning: Could not click the 'Agree' button. It might not have appeared. Error: {e}")
 
-            print("Waiting 5 seconds for the page to update...")
-            time.sleep(5)
+            # --- NEW, MORE ROBUST ACTION STEPS ---
+            game_card_selector = ".AvailableGameclassicsurvival"
+            
+            print(f"Waiting for game card '{game_card_selector}' to be visible...")
+            # Wait until the element is actually visible on the page
+            page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
 
-            # --- NEW ACTION STEP ---
-            try:
-                print("Looking for the 'Sandbox Survival' game card...")
-                # Using the unique class from the HTML you provided
-                page.locator(".AvailableGameclassicsurvival").click(timeout=30000)
-                print("Successfully clicked 'Sandbox Survival'.")
-            except Exception as e:
-                print(f"Error: Could not click the 'Sandbox Survival' card. Error: {e}")
+            print("Taking a screenshot before clicking the game card...")
+            with lock:
+                latest_screenshot_bytes = page.screenshot(timeout=10000)
 
-
+            print("Clicking 'Sandbox Survival' game card...")
+            page.locator(game_card_selector).click()
+            print("Successfully clicked 'Sandbox Survival'.")
+            
             print("Waiting 5 seconds for the lobby screen to appear...")
             time.sleep(5)
 
             print("Taking final screenshot...")
             with lock:
-                latest_screenshot_bytes = page.screenshot(timeout=5000)
+                latest_screenshot_bytes = page.screenshot(timeout=10000)
             
             print("Screenshot captured. The bot is now paused with the browser open.")
 
             while True:
                 time.sleep(60)
 
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            if 'page' in locals() and page and not page.is_closed():
-                print("Attempting to take error screenshot...")
-                with lock:
-                    latest_screenshot_bytes = page.screenshot(timeout=5000)
-                print("Error screenshot captured.")
-            
-            print("An error occurred, but the container will continue to idle.")
-            while True:
-                time.sleep(60)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        if page and not page.is_closed():
+            print("Attempting to take error screenshot...")
+            with lock:
+                latest_screenshot_bytes = page.screenshot(timeout=10000)
+            print("Error screenshot captured.")
+        
+        print("An error occurred, but the container will continue to idle.")
+        while True:
+            time.sleep(60)
 
 
 if __name__ == "__main__":
