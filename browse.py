@@ -86,11 +86,10 @@ def run_bot_sequence():
             print("Clicked 'Sandbox Survival'.")
             
             # --- THIS IS THE CORRECTED LOGIC ---
-            lobby_input_locator = page.get_by_placeholder("Lobby Name")
-            print("Waiting for lobby input to be enabled...")
-            lobby_input_locator.wait_for(state="enabled", timeout=30000)
             print("Entering lobby name...")
-            lobby_input_locator.fill("🩸🩸lifesteal😈")
+            # Playwright's .fill() command automatically waits for the element to be enabled.
+            # The explicit (and incorrect) .wait_for() call is removed.
+            page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈", timeout=30000)
             print("Lobby name entered.")
 
             print("Looking for the 'Join' button...")
@@ -121,7 +120,6 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
-
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
