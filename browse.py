@@ -4,25 +4,17 @@ from threading import Thread
 from flask import Flask
 from playwright.sync_api import sync_playwright
 
-# --- Part 1: Minimal Web Server ---
-# This server's only job is to respond to Render's health checks.
 app = Flask(__name__)
 
 @app.route('/')
 def health_check():
-    # Render's health checker just needs a 200 OK response.
     return "Bot is running.", 200
 
 def run_web_server():
-    # Render provides the PORT environment variable.
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
-# --- Part 2: Your Playwright Bot ---
 def automate_bloxd():
-    """
-    Automates a sequence of actions on bloxd.io using Playwright.
-    """
     with sync_playwright() as p:
         try:
             print("Initializing the browser...")
@@ -65,15 +57,12 @@ def automate_bloxd():
             print("Automation script has finished its tasks.")
 
 if __name__ == "__main__":
-    # Start the web server in a background thread
     server_thread = Thread(target=run_web_server)
     server_thread.daemon = True
     server_thread.start()
     
-    # Run the main bot logic
     automate_bloxd()
     
-    # Keep the main thread alive (and the container running)
     print("Container will now idle.")
     while True:
         time.sleep(60)
