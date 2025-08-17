@@ -87,11 +87,15 @@ def run_bot_sequence():
             print("Clicked 'Sandbox Survival'.")
 
             # --- THIS IS THE FINAL KEY FIX ---
-            print("Waiting 5 seconds for any post-click pop-ups to appear...")
-            time.sleep(5)
-            print("Pressing 'Escape' key to dismiss potential pop-ups...")
-            page.keyboard.press("Escape")
-            print("Pressed Escape.")
+            try:
+                print("Waiting for a potential second pop-up to appear...")
+                # This is a common selector for close buttons. We look for an 'x' icon.
+                close_button_selector = "div.close-button, i.fa-xmark"
+                print("Looking for a close button on the pop-up...")
+                page.locator(close_button_selector).click(timeout=10000)
+                print("Clicked the close button on the secondary pop-up.")
+            except Exception as e:
+                print(f"Info: No secondary pop-up found, or could not close it. Continuing. Error: {e}")
             
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             lobby_name = "🩸🩸lifesteal😈"
@@ -100,6 +104,8 @@ def run_bot_sequence():
             
             print(f"Pasting '{lobby_name}' into lobby input...")
             lobby_input_locator.click()
+            # A small delay before pasting can sometimes help
+            time.sleep(0.5)
             page.keyboard.press("Control+V")
             print("Lobby name pasted.")
 
