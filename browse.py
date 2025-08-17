@@ -85,12 +85,12 @@ def run_bot_sequence():
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
             
-            # --- THIS IS THE CORRECTED AND FINAL LOGIC ---
+            # --- THIS IS THE FINAL CORRECTED LOGIC ---
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
-            print("Waiting for lobby input to be ready...")
+            print("Waiting for lobby input to be visible...")
             lobby_input_locator.wait_for(state="visible", timeout=30000)
-            print("Clicking on lobby input to focus...")
-            lobby_input_locator.click()
+            print("Clicking on lobby input to focus (force click)...")
+            lobby_input_locator.dispatch_event('click') # Use dispatch_event to avoid timeout
             print("Typing lobby name sequentially...")
             lobby_input_locator.press_sequentially("🩸🩸lifesteal😈", delay=50)
             print("Lobby name entered.")
