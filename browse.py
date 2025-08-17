@@ -85,15 +85,18 @@ def run_bot_sequence():
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
             
+            # --- THIS IS THE CORRECTED AND FINAL LOGIC ---
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
-            print("Entering lobby name...")
-            lobby_input_locator.fill("🩸🩸lifesteal😈", timeout=30000)
+            print("Waiting for lobby input to be ready...")
+            lobby_input_locator.wait_for(state="visible", timeout=30000)
+            print("Clicking on lobby input to focus...")
+            lobby_input_locator.click()
+            print("Typing lobby name sequentially...")
+            lobby_input_locator.press_sequentially("🩸🩸lifesteal😈", delay=50)
             print("Lobby name entered.")
 
-            # --- THIS IS THE CORRECTED LOGIC ---
             print("Looking for the 'Join' button...")
-            # Use the standard .click() for its auto-waiting, but prevent it from getting stuck on navigation.
-            page.get_by_role("button", name="Join").click(no_wait_after=True, timeout=15000)
+            page.get_by_role("button", name="Join").dispatch_event('click')
             print("Clicked 'Join'. Waiting for game to load...")
 
             print("Waiting 15 seconds for the world to render...")
