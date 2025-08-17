@@ -51,7 +51,6 @@ def run_bot_sequence():
             with lock:
                 bot_status_message = "Initializing the browser..."
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
-            # Grant clipboard permissions
             context = browser.new_context(permissions=["clipboard-read", "clipboard-write"])
             page = context.new_page()
 
@@ -86,15 +85,20 @@ def run_bot_sequence():
             print("Clicking 'Sandbox Survival' game card (force click)...")
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
+
+            # --- THIS IS THE FINAL KEY FIX ---
+            print("Waiting 5 seconds for any post-click pop-ups to appear...")
+            time.sleep(5)
+            print("Pressing 'Escape' key to dismiss potential pop-ups...")
+            page.keyboard.press("Escape")
+            print("Pressed Escape.")
             
-            # --- THIS IS THE FINAL CORRECTED LOGIC ---
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             lobby_name = "🩸🩸lifesteal😈"
             print(f"Waiting for lobby input to be visible...")
             lobby_input_locator.wait_for(state="visible", timeout=30000)
             
-            print(f"Writing '{lobby_name}' to clipboard and pasting...")
-            page.evaluate(f'navigator.clipboard.writeText("{lobby_name}")')
+            print(f"Pasting '{lobby_name}' into lobby input...")
             lobby_input_locator.click()
             page.keyboard.press("Control+V")
             print("Lobby name pasted.")
@@ -127,6 +131,7 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
+
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
