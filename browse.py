@@ -85,10 +85,10 @@ def run_bot_sequence():
             page.locator(game_card_selector).dispatch_event('click')
             print("Clicked 'Sandbox Survival'.")
             
-            # --- THIS IS THE CORRECTED LINE ---
+            # --- THIS IS THE CORRECTED LOGIC ---
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             print("Waiting for lobby input to be enabled...")
-            lobby_input_locator.wait_for(state='enabled', timeout=30000)
+            lobby_input_locator.wait_for(state="enabled", timeout=30000)
             print("Entering lobby name...")
             lobby_input_locator.fill("🩸🩸lifesteal😈")
             print("Lobby name entered.")
@@ -121,6 +121,7 @@ def run_bot_sequence():
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
+
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
