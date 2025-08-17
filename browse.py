@@ -6,30 +6,34 @@ from flask import Flask
 from playwright.sync_api import sync_playwright
 
 # --- Part 1: Web Server and Shared Data ---
-latest_screenshot_bytes = None
+bot_status_message = "Bot is starting up..."
 lock = Lock()
 app = Flask(__name__)
 
 @app.route('/')
-def health_check_and_screenshot():
+def health_check_and_status():
+    global bot_status_message
     with lock:
-        screenshot_data = latest_screenshot_bytes
+        current_status = bot_status_message
     
-    if screenshot_data:
-        b64_image = base64.b64encode(screenshot_data).decode('utf-8')
-        html_content = f"""
-        <html><head><title>Bloxd.io Bot Status</title><meta http-equiv="refresh" content="15">
-            <style>body{{background-color:#121212;color:white;font-family:sans-serif;text-align:center;}} img{{border:2px solid #555;max-width:90%;height:auto;margin-top:20px;}}</style>
-        </head><body><h1>Bloxd.io Bot Status</h1><p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <p>The bot is now paused after reaching the lobby screen.</p>
-            <img src="data:image/png;base64,{b64_image}" alt="Live Screenshot">
-        </body></html>"""
-        return html_content, 200
-    else:
-        return """<html><head><title>Bot Starting</title><meta http-equiv="refresh" content="5"></head>
-            <body style="background-color:#121212;color:white;font-family:sans-serif;"><h1>Bot is starting up...</h1>
-            <p>Waiting for the bot to complete its task. This page will refresh automatically.</p>
-            </body></html>""", 200
+    html_content = f"""
+    <html>
+        <head>
+            <title>Bloxd.io Bot Status</title>
+            <meta http-equiv="refresh" content="7">
+            <style>
+                body {{ background-color: #121212; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }}
+                h1 {{ color: #4CAF50; }}
+            </style>
+        </head>
+        <body>
+            <h1>Bloxd.io Bot Status</h1>
+            <h2>Current Status: {current_status}</h2>
+            <p>Last updated: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </body>
+    </html>
+    """
+    return html_content, 200
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -37,19 +41,24 @@ def run_web_server():
 
 # --- Part 2: Playwright Bot ---
 def run_bot_sequence():
-    global latest_screenshot_bytes
+    global bot_status_message
     browser = None
     page = None
     
     try:
         with sync_playwright() as p:
             print("Initializing the browser...")
+            with lock:
+                bot_status_message = "Initializing the browser..."
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
             page = browser.new_page()
 
             print("Navigating to https://bloxd.io/")
+            with lock:
+                bot_status_message = "Navigating to bloxd.io..."
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
             
+            # Step 1: Click "Agree"
             try:
                 print("Looking for the 'Agree' button...")
                 agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
@@ -59,6 +68,21 @@ def run_bot_sequence():
             except Exception as e:
                 print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
 
+            # Step 2: Extract Username
+            try:
+                username_selector = "div.PlayerNamePreview .TextFromServerEntityName"
+                print(f"Waiting for username element '{username_selector}' to be visible...")
+                page.wait_for_selector(username_selector, state='visible', timeout=15000)
+                username = page.locator(username_selector).inner_text()
+                print(f"SUCCESS: Logged in as: {username}")
+                with lock:
+                    bot_status_message = f"Logged in as: {username}"
+            except Exception as e:
+                print(f"Warning: Could not extract username. Error: {e}")
+                with lock:
+                    bot_status_message = "Could not extract username."
+
+            # Step 3: Click "Sandbox Survival"
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
@@ -66,29 +90,40 @@ def run_bot_sequence():
             page.locator(game_card_selector).click(no_wait_after=True)
             print("Clicked 'Sandbox Survival'.")
             
-            # --- THIS IS THE KEY CHANGE ---
+            # Step 4: Enter Lobby Name
             lobby_input_selector = 'input[placeholder="Lobby Name"]'
             print(f"Waiting for lobby input '{lobby_input_selector}' to be enabled...")
-            # Wait for the input to be enabled, not just visible.
             page.wait_for_selector(lobby_input_selector, state='enabled', timeout=30000)
-            print("Lobby input is now enabled.")
+            print("Entering lobby name...")
+            page.get_by_placeholder("Lobby Name").fill("🩸🩸lifesteal😈")
+            print("Lobby name entered.")
 
-            print("Taking final screenshot...")
+            # Step 5: Click "Join"
+            print("Looking for the 'Join' button...")
+            page.get_by_role("button", name="Join").click(no_wait_after=True)
+            print("Clicked 'Join'. Waiting for game to load...")
+
+            # Step 6: Wait and send chat message
+            print("Waiting 15 seconds for the world to render...")
+            time.sleep(15) 
+            print("Activating game window and typing message...")
+            page.keyboard.press("Enter")
+            time.sleep(1)
+            page.keyboard.type("Hello World By forgot :O")
+            page.keyboard.press("Enter")
+            print("Message sent in chat.")
+
+            print("Bot has completed its task and will now pause indefinitely.")
             with lock:
-                latest_screenshot_bytes = page.screenshot(timeout=15000)
-            
-            print("Screenshot captured. The bot will now pause indefinitely.")
+                bot_status_message = "Task completed successfully! Bot is now idle."
 
             while True:
                 time.sleep(60)
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        if page and not page.is_closed():
-            print("Attempting to take error screenshot...")
-            with lock:
-                latest_screenshot_bytes = page.screenshot(timeout=10000)
-            print("Error screenshot captured.")
+        with lock:
+            bot_status_message = f"An error occurred: {e}"
         
         print("An error occurred, but the container will continue to idle.")
         while True:
