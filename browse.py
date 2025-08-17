@@ -17,17 +17,14 @@ def automate_bloxd():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    # --- New options to reduce memory ---
-    chrome_options.add_argument("--disable-gpu") # Disables GPU hardware acceleration, essential for headless
-    chrome_options.add_argument("--window-size=1280,800") # A smaller window can use less memory
+    # Options to potentially reduce memory
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1280,800")
     chrome_options.add_argument("--disable-features=NetworkService,NetworkServiceInProcess")
-
-    # Load the unpacked ad-blocker extension from the directory
-    chrome_options.add_argument('--load-extension=/app/ublock')
 
     driver = None
     try:
-        print("Initializing the browser with ad blocker...")
+        print("Initializing the browser...")
         driver = webdriver.Chrome(options=chrome_options)
         wait = WebDriverWait(driver, 20)
 
@@ -70,8 +67,7 @@ def automate_bloxd():
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        # Saving a screenshot can be helpful for debugging
-        # driver.save_screenshot("error_screenshot.png")
+        driver.save_screenshot("error_screenshot.png")
 
     finally:
         print("Automation script has finished its tasks.")
