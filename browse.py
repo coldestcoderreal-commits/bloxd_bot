@@ -22,7 +22,7 @@ def automate_bloxd():
             page = browser.new_page()
 
             print("Navigating to https://www.bloxd.io/...")
-            page.goto("https://www.bloxd.io/", timeout=90000)
+            page.goto("https://www.bloxd.io", timeout=90000)
 
             # 1. Handle consent pop-up with a robust, multi-step check.
             try:
