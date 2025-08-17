@@ -31,7 +31,7 @@ def health_check_and_screenshot():
             <body>
                 <h1>Bloxd.io Bot Status</h1>
                 <p>Screenshot taken at: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <p>The bot is now paused. This page will refresh periodically.</p>
+                <p>The bot has clicked 'Agree' and is now paused.</p>
                 <img src="data:image/png;base64,{b64_image}" alt="Live Screenshot">
             </body>
         </html>
@@ -52,8 +52,11 @@ def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
-# --- Part 2: Simplified Playwright Bot ---
+# --- Part 2: Playwright Bot ---
 def run_bot():
+    """
+    Navigates to bloxd.io, clicks the 'Agree' button, takes a screenshot, and then idles.
+    """
     global latest_screenshot_bytes
     
     with sync_playwright() as p:
@@ -63,19 +66,31 @@ def run_bot():
             page = browser.new_page()
 
             print("Navigating to https://bloxd.io/")
-            # --- THIS IS THE CHANGED LINE ---
-            # 'domcontentloaded' is faster and more reliable for complex pages than 'load'.
             page.goto("https://bloxd.io/", timeout=90000, wait_until="domcontentloaded")
 
             print("Page loaded. Waiting 10 seconds for elements to render...")
             time.sleep(10)
+            
+            # --- NEW ACTION STEP ---
+            try:
+                print("Looking for the 'Agree' button on the privacy pop-up...")
+                # Using a specific selector for the button seen in the screenshot
+                agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
+                page.locator(agree_button_selector).click(timeout=30000)
+                print("Successfully clicked the 'Agree' button.")
+            except Exception as e:
+                print(f"Warning: Could not click the 'Agree' button. It might not have appeared. Error: {e}")
 
-            print("Taking screenshot...")
+            print("Waiting 5 seconds for the page to update after click...")
+            time.sleep(5)
+
+            print("Taking final screenshot...")
             with lock:
                 latest_screenshot_bytes = page.screenshot()
             
-            print("Screenshot captured. The bot is now paused and the browser will remain open.")
+            print("Screenshot captured. The bot is now paused with the browser open.")
 
+            # Keep the bot's main function alive indefinitely.
             while True:
                 time.sleep(60)
 
