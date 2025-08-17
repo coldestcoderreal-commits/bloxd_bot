@@ -22,19 +22,24 @@ def automate_bloxd():
             page = browser.new_page()
 
             print("Navigating to https://www.bloxd.io/...")
-            # Increased timeout to give the consent pop-up ample time to load
             page.goto("https://www.bloxd.io/", timeout=90000)
 
-            # 1. Handle the "Agree" button inside the Google CMP iframe
-            print("Looking for the Google consent iframe...")
-            # This is the new, correct locator for the iframe
-            consent_frame = page.frame_locator('iframe[name="googlefcPresent"]')
-            
-            print("Looking for the 'Agree' button inside the iframe...")
-            # Now, find and click the button *within* the located frame.
-            # Using a text-based selector is often robust for these pop-ups.
-            consent_frame.get_by_text("Agree").click()
-            print("Clicked 'Agree'.")
+            # 1. Handle consent pop-up with a robust, multi-step check.
+            try:
+                print("Attempt 1: Clicking 'Agree' in Google consent iframe (5s timeout)...")
+                consent_frame = page.frame_locator('iframe[name="googlefcPresent"]')
+                consent_frame.get_by_text("Agree").click(timeout=5000)
+                print("Clicked 'Agree' in Google iframe.")
+            except Exception as e:
+                print(f"Info: Google iframe not found or timed out. ({e})")
+                print("Attempt 2: Clicking 'Agree' on the main page (5s timeout)...")
+                try:
+                    # This is the selector for the simpler, non-iframe pop-up.
+                    page.get_by_role("button", name="Agree").click(timeout=5000)
+                    print("Clicked 'Agree' on the main page.")
+                except Exception as e2:
+                    print(f"Info: Main page button not found either. ({e2})")
+                    print("Continuing without clicking a consent button.")
 
             # 2. Click the "Sandbox Survival" game card
             print("Looking for the 'Sandbox Survival' game card...")
@@ -63,7 +68,7 @@ def automate_bloxd():
             print("Message sent in chat.")
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred in the main automation flow: {e}")
         
         finally:
             print("Automation script has finished its tasks.")
