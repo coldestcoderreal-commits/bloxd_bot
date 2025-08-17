@@ -62,13 +62,16 @@ def run_bot_sequence():
             print("Page loaded. Waiting 15 seconds for initial animations to settle...")
             time.sleep(15)
 
+            # --- THIS IS THE FINAL, ROBUST POP-UP REMOVAL ---
             try:
-                print("Looking for the 'Agree' button...")
-                agree_button_selector = "div.PromptPopupNotificationBody .ButtonBody:has-text('Agree')"
-                page.locator(agree_button_selector).click(timeout=15000)
-                print("Clicked the 'Agree' button.")
+                print("Looking for the privacy pop-up to remove it...")
+                popup_selector = "div.PopupNotification"
+                page.wait_for_selector(popup_selector, state='visible', timeout=15000)
+                # Execute JavaScript to remove the element from the page
+                page.evaluate("document.querySelector('.PopupNotification').remove()")
+                print("Successfully removed the pop-up from the page.")
             except Exception as e:
-                print(f"Warning: Could not click 'Agree'. Moving on. Error: {e}")
+                print(f"Warning: Could not find pop-up to remove. Moving on. Error: {e}")
 
             try:
                 username_selector = "div.PlayerNamePreview .TextFromServerEntityName"
@@ -82,61 +85,12 @@ def run_bot_sequence():
             game_card_selector = ".AvailableGameclassicsurvival"
             print(f"Waiting for game card '{game_card_selector}' to be visible...")
             page.wait_for_selector(game_card_selector, state='visible', timeout=30000)
-            print("Clicking 'Sandbox Survival' game card (force click)...")
-            page.locator(game_card_selector).dispatch_event('click')
+            print("Clicking 'Sandbox Survival' game card...")
+            page.locator(game_card_selector).click()
             print("Clicked 'Sandbox Survival'.")
-
-            # --- THIS IS THE KEY FIX, RE-ADDED ---
-            print("Waiting 5 seconds for any post-click pop-ups to appear...")
-            time.sleep(5)
-            print("Pressing 'Escape' key to dismiss potential pop-ups...")
-            page.keyboard.press("Escape")
-            print("Pressed Escape.")
             
             lobby_input_locator = page.get_by_placeholder("Lobby Name")
             lobby_name = "🩸🩸lifesteal😈"
-            print(f"Waiting for lobby input to be visible...")
+            print(f"Waiting for lobby input to be ready...")
             lobby_input_locator.wait_for(state="visible", timeout=30000)
             
-            print(f"Pasting '{lobby_name}' into lobby input...")
-            lobby_input_locator.click(no_wait_after=True)
-            page.evaluate(f'navigator.clipboard.writeText("{lobby_name}")')
-            page.keyboard.press("Control+V")
-            print("Lobby name pasted.")
-
-            print("Looking for the 'Join' button...")
-            page.get_by_role("button", name="Join").dispatch_event('click')
-            print("Clicked 'Join'. Waiting for game to load...")
-
-            print("Waiting 15 seconds for the world to render...")
-            time.sleep(15) 
-            print("Activating game window and typing message...")
-            page.keyboard.press("Enter")
-            time.sleep(1)
-            page.keyboard.type("Hello World By forgot :O")
-            page.keyboard.press("Enter")
-            print("Message sent in chat.")
-
-            print("Bot has completed its task and will now pause indefinitely.")
-            with lock:
-                bot_status_message = "Task completed successfully! Bot is now idle."
-
-            while True:
-                time.sleep(60)
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        with lock:
-            bot_status_message = f"An error occurred: {e}"
-        
-        print("An error occurred, but the container will continue to idle.")
-        while True:
-            time.sleep(60)
-
-
-if __name__ == "__main__":
-    server_thread = Thread(target=run_web_server)
-    server_thread.daemon = True
-    server_thread.start()
-    
-    run_bot_sequence()
