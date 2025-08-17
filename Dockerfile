@@ -22,13 +22,15 @@ RUN CHROME_VERSION=$(google-chrome --version | cut -f 3 -d ' ' | cut -d '.' -f 1
     echo "Detected Chrome version: $CHROME_VERSION" && \
     DRIVER_URL=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/latest-versions-per-milestone-with-downloads.json" | jq -r ".milestones[\"$CHROME_VERSION\"].downloads.chromedriver[] | select(.platform==\"linux64\") | .url") && \
     echo "Downloading ChromeDriver from: $DRIVER_URL" && \
-    wget -O /tmp/chromedriver.zip ${DRIVER_URL} && \
+    wget -O /tmp/chromedriver.zip "${DRIVER_URL}" && \
     unzip /tmp/chromedriver.zip -d /tmp && \
     mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
     rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64
 
-# 4. Download and unpack the ad blocker extension
-RUN wget -O /tmp/ublock.zip https://github.com/gorhill/uBlock/releases/latest/download/uBlock0.chromium.zip && \
+# 4. Dynamically find and download the latest uBlock Origin release
+RUN UBLOCK_URL=$(curl -s https://api.github.com/repos/gorhill/uBlock/releases/latest | jq -r ".assets[] | select(.name | endswith(\".chromium.zip\")) | .browser_download_url") && \
+    echo "Downloading uBlock Origin from: ${UBLOCK_URL}" && \
+    wget -O /tmp/ublock.zip "${UBLOCK_URL}" && \
     unzip /tmp/ublock.zip -d /app/ublock && \
     rm /tmp/ublock.zip
 
