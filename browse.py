@@ -44,7 +44,6 @@ def run_web_server():
 def run_bot_sequence():
     global bot_status_message
     browser = None
-    page = None
     
     try:
         with sync_playwright() as p:
@@ -54,9 +53,8 @@ def run_bot_sequence():
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
             page = browser.new_page()
 
-            # --- THIS IS THE KEY CHANGE ---
             # Construct the direct URL, ensuring the lobby name is correctly URL-encoded.
-            game_mode = "classic" # As per your link
+            game_mode = "classic"
             lobby_name_raw = "🩸🩸lifesteal😈"
             lobby_name_encoded = quote(lobby_name_raw)
             direct_url = f"https://bloxd.io/play/{game_mode}/{lobby_name_encoded}"
@@ -69,7 +67,9 @@ def run_bot_sequence():
             page.goto(direct_url, timeout=90000, wait_until="domcontentloaded")
 
             print("Waiting 20 seconds for the world to render...")
-            time.sleep(20) # A longer wait is needed for the game to load directly
+            with lock:
+                bot_status_message = "In lobby, waiting for world to render..."
+            time.sleep(20)
 
             print("Activating game window and typing message...")
             page.keyboard.press("Enter")
