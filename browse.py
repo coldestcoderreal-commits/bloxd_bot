@@ -1,22 +1,17 @@
 import time
 import os
-import base64
-from threading import Thread, Lock
-from urllib.parse import quote
+from threading import Thread
 from flask import Flask
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # --- Part 1: Web Server and Shared Data ---
 bot_status_message = "Bot is starting up..."
-lock = Lock()
+
 app = Flask(__name__)
 
 @app.route('/')
 def health_check_and_status():
     global bot_status_message
-    with lock:
-        current_status = bot_status_message
-    
     html_content = f"""
     <html>
         <head>
@@ -29,7 +24,7 @@ def health_check_and_status():
         </head>
         <body>
             <h1>Bloxd.io Bot Status</h1>
-            <h2>Current Status: {current_status}</h2>
+            <h2>Current Status: {bot_status_message}</h2>
             <p>Last updated: {time.strftime('%Y-%m-%d %H:%M:%S')}</p>
         </body>
     </html>
@@ -47,53 +42,59 @@ def run_bot_sequence():
     
     try:
         with sync_playwright() as p:
-            print("Initializing the browser...")
-            with lock:
-                bot_status_message = "Initializing the browser..."
+            bot_status_message = "Initializing browser..."
+            print(bot_status_message)
             browser = p.chromium.launch(headless=True, args=["--window-size=1280,720"])
             page = browser.new_page()
 
-            # Construct the direct URL, ensuring the lobby name is correctly URL-encoded.
-            game_mode = "classic"
-            lobby_name_raw = "🩸🩸lifesteal😈"
-            lobby_name_encoded = quote(lobby_name_raw)
-            direct_url = f"https://bloxd.io/play/{game_mode}/{lobby_name_encoded}"
+            lobby_name = "🩸🩸lifesteal😈"
+            direct_url = f"https://bloxd.io/play/classic/{lobby_name}"
             
-            print(f"Navigating directly to server: {direct_url}")
-            with lock:
-                bot_status_message = f"Navigating directly to lobby: {lobby_name_raw}"
-            
-            # Go straight to the game server URL
+            bot_status_message = f"Navigating to lobby: {lobby_name}"
+            print(bot_status_message)
             page.goto(direct_url, timeout=90000, wait_until="domcontentloaded")
 
-            print("Waiting 20 seconds for the world to render...")
-            with lock:
-                bot_status_message = "In lobby, waiting for world to render..."
-            time.sleep(20)
+            # --- THE FINAL FIX ---
+            # Handle the intermediate "Enter Bloxd" screen if it appears.
+            try:
+                bot_status_message = "Looking for 'Enter Bloxd' button..."
+                print(bot_status_message)
+                enter_button_selector = "div.ButtonBody:has-text('Enter Bloxd')"
+                page.locator(enter_button_selector).click(timeout=20000)
+                bot_status_message = "Clicked 'Enter Bloxd'. Waiting for world to render..."
+                print(bot_status_message)
+                time.sleep(15) # Extra wait after clicking
+            except PlaywrightTimeoutError:
+                bot_status_message = "'Enter Bloxd' button not found, assuming direct entry. Waiting for world to render..."
+                print(bot_status_message)
+                time.sleep(15)
 
-            print("Activating game window and typing message...")
+            bot_status_message = "Activating game window..."
+            print(bot_status_message)
+            # Click the center of the viewport to focus the game window
+            page.mouse.click(640, 360) 
+            time.sleep(1)
+
+            print("Typing message...")
             page.keyboard.press("Enter")
             time.sleep(1)
             page.keyboard.type("Hello World By forgot :O")
             page.keyboard.press("Enter")
             print("Message sent in chat.")
 
-            print("Bot has completed its task and will now pause indefinitely.")
-            with lock:
-                bot_status_message = "Task completed successfully! Bot is now idle in-game."
+            bot_status_message = "Task completed successfully! Bot is now idle in-game."
+            print(bot_status_message)
 
             while True:
                 time.sleep(60)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
-        with lock:
-            bot_status_message = f"An error occurred: {e}"
+        bot_status_message = f"An error occurred: {e}"
+        print(bot_status_message)
         
         print("An error occurred, but the container will continue to idle.")
         while True:
             time.sleep(60)
-
 
 if __name__ == "__main__":
     server_thread = Thread(target=run_web_server)
